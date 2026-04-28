@@ -10,7 +10,6 @@ jobs:
     with:
       image_name: ${{ github.ref_name == 'dev' && 'dev_ai_scratch' || github.ref_name == 'main' && 'ai_scratch' }}
       service_name: ${{ github.ref_name == 'dev' && 'dev_ai_scratch' || github.ref_name == 'main' && 'ai_scratch' }}
-      db_arg: ${{ github.ref_name == 'dev' && 'postgresql://ak_admission_user:gAjls4d4HcKuxS7JqhPnC2ij5bCFEJi6wxbNNHfd0nYyt1Ux4tjfOUwILc@10.7.9.28:57926/be_student_dev?schema=public' || github.ref_name == 'main' && 'postgresql://ak_admission_user:gAjls4d4HcKuxS7JqhPnC2ij5bCFEJi6wxbNNHfd0nYyt1Ux4tjfOUwILc@10.7.9.28:57926/be_student_prod?schema=public' }}
 #      use_arg: postgresql://ak_admission_user:gAjls4d4HcKuxS7JqhPnC2ij5bCFEJi6wxbNNHfd0nYyt1Ux4tjfOUwILc@10.7.9.28:57926/be_student_dev?schema=public
     secrets:
       DOCKERHUB_USER: ${{ secrets.DOCKERHUB_USER }}
