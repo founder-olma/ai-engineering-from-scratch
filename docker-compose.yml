@@ -1,0 +1,105 @@
+# ============================================================
+# docker-compose.yml — AI Engineering from Scratch
+# ============================================================
+#
+# Quick start:
+#   docker compose up jupyter          # JupyterLab on :8888
+#   docker compose run --rm python     # Python REPL
+#   docker compose run --rm bash       # Shell in full environment
+#
+# With GPU (requires nvidia-container-toolkit):
+#   docker compose --profile gpu up jupyter-gpu
+# ============================================================
+
+version: "3.9"
+
+services:
+
+  # ── JupyterLab (default) ───────────────────────────────────
+  jupyter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: final
+    image: ai-engineering:latest
+    container_name: ai-engineering-jupyter
+    ports:
+      - "8888:8888"   # JupyterLab UI
+      - "8000:8000"   # FastAPI dev server
+    volumes:
+      - .:/workspace                        # Live-reload project files
+      - ai-pip-cache:/root/.cache/pip       # Persist pip cache
+      - ai-julia-depot:/root/.julia         # Persist Julia packages
+    environment:
+      - PYTHONPATH=/workspace
+      - JUPYTER_ENABLE_LAB=yes
+    env_file:
+      - .env                                # Put API keys here (ANTHROPIC_API_KEY, OPENAI_API_KEY, etc.)
+    command: >
+      jupyter lab --ip=0.0.0.0 --port=8888 --no-browser
+      --allow-root --NotebookApp.token='' --NotebookApp.password=''
+    restart: unless-stopped
+
+  # ── GPU-enabled JupyterLab ────────────────────────────────
+  jupyter-gpu:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: final
+    image: ai-engineering:latest
+    container_name: ai-engineering-jupyter-gpu
+    profiles: ["gpu"]
+    ports:
+      - "8888:8888"
+      - "8000:8000"
+    volumes:
+      - .:/workspace
+      - ai-pip-cache:/root/.cache/pip
+    environment:
+      - PYTHONPATH=/workspace
+    env_file:
+      - .env
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    command: >
+      jupyter lab --ip=0.0.0.0 --port=8888 --no-browser
+      --allow-root --NotebookApp.token='' --NotebookApp.password=''
+
+  # ── Bare Python shell ─────────────────────────────────────
+  python:
+    image: ai-engineering:latest
+    container_name: ai-engineering-python
+    volumes:
+      - .:/workspace
+    environment:
+      - PYTHONPATH=/workspace
+    env_file:
+      - .env
+    working_dir: /workspace
+    entrypoint: python3
+    stdin_open: true
+    tty: true
+
+  # ── Bash shell (full environment) ─────────────────────────
+  bash:
+    image: ai-engineering:latest
+    container_name: ai-engineering-bash
+    volumes:
+      - .:/workspace
+    environment:
+      - PYTHONPATH=/workspace
+    env_file:
+      - .env
+    working_dir: /workspace
+    entrypoint: /bin/bash
+    stdin_open: true
+    tty: true
+
+volumes:
+  ai-pip-cache:
+  ai-julia-depot:
