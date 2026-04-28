@@ -1,35 +1,43 @@
-name: Build & Deploy
-
+name: Use Shared CI/CD Template
 on:
   push:
     branches:
       - main
-
+      - dev
 jobs:
   deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          port: ${{ secrets.SERVER_PORT || 22 }}
-          script: |
-            set -e
-            cd /projects
+    uses: akfa-uz/ci-cd-templates/.github/workflows/mvp-35.yml@main  #with-dockerfile.yml  #docker-with-args.yml
+    with:
+      image_name: ${{ github.ref_name == 'dev' && 'dev_ai_scratch' || github.ref_name == 'main' && 'ai_scratch' }}
+      service_name: ${{ github.ref_name == 'dev' && 'dev_ai_scratch' || github.ref_name == 'main' && 'ai_scratch' }}
+      db_arg: ${{ github.ref_name == 'dev' && 'postgresql://ak_admission_user:gAjls4d4HcKuxS7JqhPnC2ij5bCFEJi6wxbNNHfd0nYyt1Ux4tjfOUwILc@10.7.9.28:57926/be_student_dev?schema=public' || github.ref_name == 'main' && 'postgresql://ak_admission_user:gAjls4d4HcKuxS7JqhPnC2ij5bCFEJi6wxbNNHfd0nYyt1Ux4tjfOUwILc@10.7.9.28:57926/be_student_prod?schema=public' }}
+#      use_arg: postgresql://ak_admission_user:gAjls4d4HcKuxS7JqhPnC2ij5bCFEJi6wxbNNHfd0nYyt1Ux4tjfOUwILc@10.7.9.28:57926/be_student_dev?schema=public
+    secrets:
+      DOCKERHUB_USER: ${{ secrets.DOCKERHUB_USER }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+  
+  notify-dev:
+    if: github.ref_name == 'dev' && always() # Run no matter what
+    needs: deploy
+    uses: akfa-uz/ci-cd-templates/.github/workflows/discord.yml@main
+    with:
+      status: ${{ needs.deploy.result }} # Will be "success", "failure", or "cancelled"
+    secrets:
+      DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_DEV_CI_CD }}
+  notify-dev-02:
+    if: github.ref_name == 'dev-02' && always() # Run no matter what
+    needs: deploy
+    uses: akfa-uz/ci-cd-templates/.github/workflows/discord.yml@main
+    with:
+      status: ${{ needs.deploy.result }} # Will be "success", "failure", or "cancelled"
+    secrets:
+      DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_DEV_CI_CD }}
 
-            if [ ! -d "ai-scratch/.git" ]; then
-              git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git ai-scratch
-            fi
-
-            cd ai-scratch
-            git fetch origin main
-            git reset --hard origin/main
-
-            docker compose pull || true
-            docker compose down
-            docker compose up -d --build
-
-            docker image prune -f
+  notify-main:
+    if: github.ref_name == 'main' && always() # Run no matter what
+    needs: deploy
+    uses: akfa-uz/ci-cd-templates/.github/workflows/discord.yml@main
+    with:
+      status: ${{ needs.deploy.result }} # Will be "success", "failure", or "cancelled"
+    secrets:
+      DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_CI_CD }}
